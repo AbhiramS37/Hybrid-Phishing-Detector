@@ -41,6 +41,6 @@ This project implements a hybrid phishing detection system combining:
 - pip install -r requirements.txt
 - python app.py
 
-📌 Future Improvements
+##Future Improvements
 - Larger training dataset
 - Improved image model accuracy
