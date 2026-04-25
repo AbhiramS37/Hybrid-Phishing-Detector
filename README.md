@@ -38,5 +38,5 @@ This project implements a hybrid phishing detection system combining:
 - Real-time analysis via Flask API  
 
 ## HOW TO RUN!
-pip install -r requirements.txt
-python app.py
+- pip install -r requirements.txt
+- python app.py
