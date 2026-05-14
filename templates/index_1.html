@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hybrid Phishing Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0d14;
+            --surface: #111520;
+            --surface-2: #161c2d;
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(99,179,237,0.3);
+            --accent: #63b3ed;
+            --accent-dim: rgba(99,179,237,0.12);
+            --safe: #48bb78;
+            --safe-dim: rgba(72,187,120,0.1);
+            --danger: #fc8181;
+            --danger-dim: rgba(252,129,129,0.1);
+            --warn: #f6ad55;
+            --text: #e2e8f0;
+            --text-muted: #4a5568;
+            --text-dim: #718096;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background grid */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Radial glow */
+        body::after {
+            content: '';
+            position: fixed;
+            top: -20%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 700px;
+            height: 400px;
+            background: radial-gradient(ellipse, rgba(99,179,237,0.07) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-wrapper {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 560px;
+            animation: fadeUp 0.6s ease both;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(24px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .shield-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 56px;
+            height: 56px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(99,179,237,0.2);
+            border-radius: 14px;
+            margin-bottom: 20px;
+            animation: pulse-ring 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse-ring {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,179,237,0.15); }
+            50% { box-shadow: 0 0 0 10px rgba(99,179,237,0); }
+        }
+
+        .shield-icon svg {
+            width: 28px;
+            height: 28px;
+            color: var(--accent);
+        }
+
+        .header h1 {
+            font-family: 'Syne', sans-serif;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            color: #fff;
+        }
+
+        .header p {
+            margin-top: 8px;
+            font-size: 12px;
+            color: var(--text-dim);
+            letter-spacing: 0.04em;
+        }
+
+        /* Card */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 20px;
+        }
+
+        /* Form */
+        .field {
+            margin-bottom: 20px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 11px;
+            font-weight: 500;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap svg {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            color: var(--text-muted);
+            pointer-events: none;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'DM Mono', monospace;
+            font-size: 13px;
+            padding: 12px 14px 12px 40px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input[type="text"]::placeholder { color: var(--text-muted); }
+
+        input[type="text"]:focus {
+            border-color: rgba(99,179,237,0.4);
+            box-shadow: 0 0 0 3px rgba(99,179,237,0.07);
+        }
+
+        /* File upload zone */
+        .file-zone {
+            position: relative;
+            background: var(--surface-2);
+            border: 1px dashed var(--border);
+            border-radius: 10px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .file-zone:hover, .file-zone.drag-over {
+            border-color: rgba(99,179,237,0.35);
+            background: rgba(99,179,237,0.04);
+        }
+
+        .file-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .file-zone-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: rgba(99,179,237,0.08);
+            border-radius: 10px;
+            margin: 0 auto 12px;
+        }
+
+        .file-zone-icon svg { width: 20px; height: 20px; color: var(--accent); }
+
+        .file-zone-label {
+            font-size: 13px;
+            color: var(--text-dim);
+            line-height: 1.5;
+        }
+
+        .file-zone-label span {
+            color: var(--accent);
+            font-weight: 500;
+        }
+
+        .file-name {
+            display: none;
+            margin-top: 10px;
+            font-size: 12px;
+            color: var(--accent);
+            background: var(--accent-dim);
+            border-radius: 6px;
+            padding: 6px 10px;
+            word-break: break-all;
+        }
+
+        .file-name.visible { display: block; }
+
+        /* Divider */
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 24px 0;
+        }
+
+        /* Submit button */
+        .btn-check {
+            width: 100%;
+            padding: 13px;
+            background: var(--accent);
+            color: #0a0d14;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 14px;
+            letter-spacing: 0.04em;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.15s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-check:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-check:active { transform: translateY(0); opacity: 1; }
+
+        .btn-check svg { width: 16px; height: 16px; }
+
+        /* Results */
+        .results-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            animation: fadeUp 0.5s ease both 0.1s;
+        }
+
+        .results-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .results-header-label {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            color: #fff;
+        }
+
+        .verdict-badge {
+            margin-left: auto;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 11px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+
+        .verdict-badge.safe {
+            background: var(--safe-dim);
+            color: var(--safe);
+            border: 1px solid rgba(72,187,120,0.2);
+        }
+
+        .verdict-badge.phishing {
+            background: var(--danger-dim);
+            color: var(--danger);
+            border: 1px solid rgba(252,129,129,0.2);
+        }
+
+        .results-body { padding: 20px 24px; }
+
+        .result-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .result-row:last-child { border-bottom: none; }
+
+        .result-key {
+            font-size: 11px;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--text-muted);
+        }
+
+        .result-val {
+            font-size: 13px;
+            color: var(--text);
+            text-align: right;
+            font-weight: 500;
+        }
+
+        .result-val.safe { color: var(--safe); }
+        .result-val.phishing { color: var(--danger); }
+
+        .conf-bar-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .conf-bar {
+            width: 80px;
+            height: 4px;
+            background: var(--surface-2);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .conf-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s cubic-bezier(.4,0,.2,1);
+        }
+
+        .conf-fill.safe { background: var(--safe); }
+        .conf-fill.phishing { background: var(--danger); }
+
+        .final-row {
+            margin-top: 16px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .final-row.safe { background: var(--safe-dim); border: 1px solid rgba(72,187,120,0.15); }
+        .final-row.phishing { background: var(--danger-dim); border: 1px solid rgba(252,129,129,0.15); }
+
+        .final-label-text {
+            font-family: 'Syne', sans-serif;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        .final-row.safe .final-label-text { color: var(--safe); }
+        .final-row.phishing .final-label-text { color: var(--danger); }
+
+        .final-conf {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .footer-note {
+            text-align: center;
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 20px;
+            letter-spacing: 0.04em;
+        }
+    </style>
+</head>
+<body>
+
+<div class="page-wrapper">
+
+    <!-- Header -->
+    <div class="header">
+        <div class="shield-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+            </svg>
+        </div>
+        <h1>Phishing Detector</h1>
+        <p>Hybrid URL + Screenshot Analysis Engine</p>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+
+        <form method="POST" enctype="multipart/form-data">
+
+            <!-- URL Field -->
+            <div class="field">
+                <label>Target URL</label>
+                <div class="input-wrap">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <input type="text" name="url" placeholder="https://example.com" required>
+                </div>
+            </div>
+
+            <!-- Screenshot Upload -->
+            <div class="field">
+                <label>Screenshot</label>
+                <div class="file-zone" id="dropZone">
+                    <input type="file" name="image" accept="image/*" id="fileInput" required>
+                    <div class="file-zone-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+                        </svg>
+                    </div>
+                    <div class="file-zone-label">
+                        <span>Choose a file</span> or drag it here<br>PNG, JPG, WEBP accepted
+                    </div>
+                    <div class="file-name" id="fileName"></div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <button type="submit" class="btn-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                Analyze Site
+            </button>
+
+        </form>
+
+    </div>
+
+    {% if final_label %}
+    {% set is_safe = final_label|lower == 'legitimate' %}
+
+    <!-- Results Card -->
+    <div class="results-card">
+
+        <div class="results-header">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="{{ '#48bb78' if is_safe else '#fc8181' }}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span class="results-header-label">Analysis Report</span>
+            <span class="verdict-badge {{ 'safe' if is_safe else 'phishing' }}">
+                {{ 'Safe' if is_safe else 'Phishing' }}
+            </span>
+        </div>
+
+        <div class="results-body">
+
+            <!-- URL row -->
+            <div class="result-row">
+                <span class="result-key">URL Analysis</span>
+                <div class="conf-bar-wrap">
+                    <span class="result-val {{ 'safe' if url_label|lower == 'legitimate' else 'phishing' }}">{{ url_label }}</span>
+                    <div class="conf-bar">
+                        <div class="conf-fill {{ 'safe' if url_label|lower == 'legitimate' else 'phishing' }}"
+                             style="width: {{ url_conf }}"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-dim);min-width:38px;text-align:right">{{ url_conf }}</span>
+                </div>
+            </div>
+
+            <!-- Image row -->
+            <div class="result-row">
+                <span class="result-key">Image Analysis</span>
+                <div class="conf-bar-wrap">
+                    <span class="result-val {{ 'safe' if img_label|lower == 'legitimate' else 'phishing' }}">{{ img_label }}</span>
+                    <div class="conf-bar">
+                        <div class="conf-fill {{ 'safe' if img_label|lower == 'legitimate' else 'phishing' }}"
+                             style="width: {{ img_conf }}"></div>
+                    </div>
+                    <span style="font-size:11px;color:var(--text-dim);min-width:38px;text-align:right">{{ img_conf }}</span>
+                </div>
+            </div>
+
+            <!-- Source row -->
+            <div class="result-row">
+                <span class="result-key">Decision Source</span>
+                <span class="result-val">{{ source }}</span>
+            </div>
+
+            <!-- Final verdict -->
+            <div class="final-row {{ 'safe' if is_safe else 'phishing' }}">
+                <div>
+                    <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;opacity:0.6">Final Verdict</div>
+                    <div class="final-label-text">{{ final_label }}</div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:10px;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:4px;opacity:0.6">Confidence</div>
+                    <div class="final-conf" style="color:inherit;font-weight:600">{{ final_conf }}</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
+    <p class="footer-note">Hybrid ML Detection · URL + Visual Analysis</p>
+
+</div>
+
+<script>
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileNameEl = document.getElementById('fileName');
+
+    fileInput.addEventListener('change', () => {
+        const f = fileInput.files[0];
+        if (f) {
+            fileNameEl.textContent = '📎 ' + f.name;
+            fileNameEl.classList.add('visible');
+        }
+    });
+
+    ['dragenter','dragover'].forEach(e => {
+        dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.add('drag-over'); });
+    });
+    ['dragleave','drop'].forEach(e => {
+        dropZone.addEventListener(e, ev => { ev.preventDefault(); dropZone.classList.remove('drag-over'); });
+    });
+    dropZone.addEventListener('drop', ev => {
+        const f = ev.dataTransfer.files[0];
+        if (f) {
+            const dt = new DataTransfer();
+            dt.items.add(f);
+            fileInput.files = dt.files;
+            fileNameEl.textContent = '📎 ' + f.name;
+            fileNameEl.classList.add('visible');
+        }
+    });
+</script>
+
+</body>
+</html>

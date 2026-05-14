@@ -1,0 +1,15 @@
+# Ignore trained models
+*.pth
+*.pt
+*.bin
+*.h5
+*.ckpt
+
+# Ignore BERT model folder
+url_bert_model/
+
+# Ignore datasets
+image_dataset_new/
+url_dataset/
+malicious_phish.csv
+*.csv

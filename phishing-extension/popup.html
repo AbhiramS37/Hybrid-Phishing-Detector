@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phishing Detector</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0d14;
+      --surface: #111520;
+      --surface-2: #161c2d;
+      --border: rgba(255,255,255,0.06);
+      --accent: #63b3ed;
+      --accent-dim: rgba(99,179,237,0.12);
+      --safe: #48bb78;
+      --safe-dim: rgba(72,187,120,0.1);
+      --danger: #fc8181;
+      --danger-dim: rgba(252,129,129,0.1);
+      --text: #e2e8f0;
+      --text-muted: #4a5568;
+      --text-dim: #718096;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      width: 360px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    /* Grid bg */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(99,179,237,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99,179,237,0.03) 1px, transparent 1px);
+      background-size: 32px 32px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrapper {
+      position: relative;
+      z-index: 1;
+      padding: 20px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .shield {
+      width: 36px;
+      height: 36px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(99,179,237,0.2);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(99,179,237,0.15); }
+      50% { box-shadow: 0 0 0 8px rgba(99,179,237,0); }
+    }
+
+    .shield svg { width: 18px; height: 18px; color: var(--accent); }
+
+    .header-text h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: 16px;
+      font-weight: 800;
+      color: #fff;
+      letter-spacing: -0.3px;
+    }
+
+    .header-text p {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 2px;
+    }
+
+    /* URL Preview */
+    .url-preview {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .url-preview svg { width: 14px; height: 14px; color: var(--text-muted); flex-shrink: 0; }
+
+    .url-text {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      flex: 1;
+    }
+
+    /* Scan button */
+    .btn-scan {
+      width: 100%;
+      padding: 12px;
+      background: var(--accent);
+      color: #0a0d14;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: opacity 0.2s, transform 0.15s;
+      margin-bottom: 16px;
+    }
+
+    .btn-scan:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-scan:active { transform: translateY(0); }
+    .btn-scan:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-scan svg { width: 15px; height: 15px; }
+
+    /* Loader */
+    .loader {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    .loader.visible { display: flex; }
+
+    .spinner {
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loader p {
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    /* Error */
+    .error-box {
+      display: none;
+      background: rgba(252,129,129,0.08);
+      border: 1px solid rgba(252,129,129,0.2);
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--danger);
+      margin-bottom: 14px;
+    }
+
+    .error-box.visible { display: block; }
+
+    /* Results */
+    .results {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .results.visible { display: block; }
+
+    .results-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .results-title {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      color: #fff;
+      flex: 1;
+    }
+
+    .verdict-badge {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .verdict-badge.safe { background: var(--safe-dim); color: var(--safe); border: 1px solid rgba(72,187,120,0.2); }
+    .verdict-badge.phishing { background: var(--danger-dim); color: var(--danger); border: 1px solid rgba(252,129,129,0.2); }
+
+    .results-body { padding: 14px 16px; }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 9px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-row:last-child { border-bottom: none; }
+
+    .rkey {
+      font-size: 10px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .rval {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .rval.safe { color: var(--safe); }
+    .rval.phishing { color: var(--danger); }
+
+    .conf-bar {
+      width: 60px;
+      height: 3px;
+      background: var(--surface-2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .conf-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+
+    .conf-fill.safe { background: var(--safe); }
+    .conf-fill.phishing { background: var(--danger); }
+
+    .final-row {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .final-row.safe { background: var(--safe-dim); border: 1px solid rgba(72,187,120,0.15); }
+    .final-row.phishing { background: var(--danger-dim); border: 1px solid rgba(252,129,129,0.15); }
+
+    .final-label {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .final-row.safe .final-label { color: var(--safe); }
+    .final-row.phishing .final-label { color: var(--danger); }
+
+    .final-conf {
+      font-size: 11px;
+      opacity: 0.7;
+    }
+
+    .sub-label {
+      font-size: 9px;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.5;
+      margin-bottom: 3px;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 10px;
+      color: var(--text-muted);
+      margin-top: 16px;
+      letter-spacing: 0.04em;
+    }
+  </style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="shield">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+    </div>
+    <div class="header-text">
+      <h1>Phishing Detector</h1>
+      <p>Hybrid URL + Screenshot Analysis</p>
+    </div>
+  </div>
+
+  <!-- Current URL -->
+  <div class="url-preview">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="2" y1="12" x2="22" y2="12"/>
+      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+    </svg>
+    <span class="url-text" id="currentUrl">Detecting URL...</span>
+  </div>
+
+  <!-- Scan Button -->
+  <button class="btn-scan" id="scanBtn">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    Scan This Page
+  </button>
+
+  <!-- Loader -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <p>Capturing &amp; analysing...</p>
+  </div>
+
+  <!-- Error -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- Results -->
+  <div class="results" id="results">
+    <div class="results-header">
+      <span class="results-title">Analysis Report</span>
+      <span class="verdict-badge" id="verdictBadge"></span>
+    </div>
+    <div class="results-body">
+      <div class="result-row">
+        <span class="rkey">URL Analysis</span>
+        <div class="rval" id="urlResult">
+          <span id="urlLabel"></span>
+          <div class="conf-bar"><div class="conf-fill" id="urlBar" style="width:0%"></div></div>
+          <span id="urlConf" style="font-size:10px;color:var(--text-dim)"></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="rkey">Image Analysis</span>
+        <div class="rval" id="imgResult">
+          <span id="imgLabel"></span>
+          <div class="conf-bar"><div class="conf-fill" id="imgBar" style="width:0%"></div></div>
+          <span id="imgConf" style="font-size:10px;color:var(--text-dim)"></span>
+        </div>
+      </div>
+      <div class="result-row">
+        <span class="rkey">Decision Source</span>
+        <span class="rval" id="sourceVal"></span>
+      </div>
+      <div class="final-row" id="finalRow">
+        <div>
+          <div class="sub-label">Final Verdict</div>
+          <div class="final-label" id="finalLabel"></div>
+        </div>
+        <div style="text-align:right">
+          <div class="sub-label">Confidence</div>
+          <div class="final-conf" id="finalConf"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="footer">Hybrid ML · Auto URL + Screenshot</p>
+
+</div>
+<script src="popup.js"></script>
+</body>
+</html>
