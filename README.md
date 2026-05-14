@@ -12,7 +12,6 @@ This project implements a hybrid phishing detection system combining:
 ## ⚙️ Tech Stack
 - Python, Flask  
 - PyTorch  
-- HuggingFace Transformers  
 - EfficientNet-B3 (CNN)  
 - BERT (NLP)
 
