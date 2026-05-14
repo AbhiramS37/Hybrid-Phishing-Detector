@@ -43,3 +43,13 @@ This project implements a hybrid phishing detection system combining:
 ## Future Improvements
 - Larger training dataset
 - Improved image model accuracy
+
+## Trained Models
+
+## EfficientNet-B3 Model
+Download:
+https://huggingface.co/Abhiram37/Efficient-net-b3
+
+## BERT URL Detection Model
+Download:
+https://huggingface.co/Abhiram37/Bert-url-model
